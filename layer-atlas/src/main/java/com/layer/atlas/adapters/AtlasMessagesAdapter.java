@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Space;
 import android.widget.TextView;
-
 import com.layer.atlas.AtlasAvatar;
 import com.layer.atlas.R;
 import com.layer.atlas.messagetypes.AtlasCellFactory;
@@ -27,13 +26,8 @@ import com.layer.sdk.query.Query;
 import com.layer.sdk.query.RecyclerViewController;
 import com.squareup.picasso.Picasso;
 
-import java.text.DateFormat;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * AtlasMessagesAdapter drives an AtlasMessagesList.  The AtlasMessagesAdapter itself handles
@@ -80,8 +74,8 @@ public class AtlasMessagesAdapter extends RecyclerView.Adapter<AtlasMessagesAdap
 
     // Dates and Clustering
     private final Map<Uri, Cluster> mClusterCache = new HashMap<Uri, Cluster>();
-    private final DateFormat mDateFormat;
-    private final DateFormat mTimeFormat;
+    private final SimpleDateFormat mDayFormat;
+    private final SimpleDateFormat mTimeFormat;
 
     private View mFooterView;
     private int mFooterPosition = 0;
@@ -98,8 +92,8 @@ public class AtlasMessagesAdapter extends RecyclerView.Adapter<AtlasMessagesAdap
         mPicasso = picasso;
         mLayoutInflater = LayoutInflater.from(context);
         mUiThreadHandler = new Handler(Looper.getMainLooper());
-        mDateFormat = android.text.format.DateFormat.getDateFormat(context);
-        mTimeFormat = android.text.format.DateFormat.getTimeFormat(context);
+        mDayFormat = new SimpleDateFormat("MMM dd, ", Locale.getDefault());
+        mTimeFormat = new SimpleDateFormat("hh:mma", Locale.getDefault());
         mDisplayMetrics = context.getResources().getDisplayMetrics();
 
         mQueryController = layerClient.newRecyclerViewController(null, null, this);
@@ -289,11 +283,11 @@ public class AtlasMessagesAdapter extends RecyclerView.Adapter<AtlasMessagesAdap
             viewHolder.mTimeGroup.setVisibility(View.GONE);
         } else if (cluster.mDateBoundaryWithPrevious || cluster.mClusterWithPrevious == ClusterType.MORE_THAN_HOUR) {
             // Crossed into a new day, or > 1hr lull in conversation
-            Date receivedAt = message.getReceivedAt();
-            if (receivedAt == null) receivedAt = new Date();
-            String timeBarDayText = Util.formatTimeDay(viewHolder.mCell.getContext(), receivedAt);
+            Date sentAt = message.getSentAt();
+            if (sentAt == null) sentAt = new Date();
+            String timeBarDayText = Util.formatTimeDay(viewHolder.mCell.getContext(), sentAt);
             viewHolder.mTimeGroupDay.setText(timeBarDayText);
-            String timeBarTimeText = mTimeFormat.format(receivedAt.getTime());
+            String timeBarTimeText = mTimeFormat.format(sentAt.getTime());
             viewHolder.mTimeGroupTime.setText(" " + timeBarTimeText);
             viewHolder.mTimeGroup.setVisibility(View.VISIBLE);
             viewHolder.mClusterSpaceGap.setVisibility(View.GONE);
