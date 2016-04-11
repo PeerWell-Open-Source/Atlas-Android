@@ -2,6 +2,7 @@ package com.layer.atlas.messagetypes.text;
 
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.text.util.Linkify;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,7 +10,6 @@ import android.view.ViewGroup;
 import android.view.textservice.TextInfo;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.layer.atlas.R;
 import com.layer.atlas.messagetypes.AtlasCellFactory;
 import com.layer.atlas.util.Util;
@@ -17,6 +17,9 @@ import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Identity;
 import com.layer.sdk.messaging.Message;
 import com.layer.sdk.messaging.MessagePart;
+
+import java.util.*;
+import java.util.regex.*;
 
 public class TextCellFactory extends AtlasCellFactory<TextCellFactory.CellHolder, TextCellFactory.TextInfo> implements View.OnLongClickListener {
     public final static String MIME_TYPE = "text/plain";
@@ -63,6 +66,8 @@ public class TextCellFactory extends AtlasCellFactory<TextCellFactory.CellHolder
         cellHolder.mTextView.setText(parsed.getString());
         cellHolder.mTextView.setTag(parsed);
         cellHolder.mTextView.setOnLongClickListener(this);
+        Pattern matcher = Pattern.compile("prwl://.*");
+        Linkify.addLinks(cellHolder.mTextView, matcher, "");
     }
 
     public boolean isType(Message message) {
