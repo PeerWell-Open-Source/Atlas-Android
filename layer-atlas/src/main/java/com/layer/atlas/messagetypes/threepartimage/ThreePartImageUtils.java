@@ -6,19 +6,17 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.MediaStore;
-
 import com.layer.atlas.util.Log;
 import com.layer.atlas.util.Util;
 import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Message;
 import com.layer.sdk.messaging.MessagePart;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Locale;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class ThreePartImageUtils {
     public static final int ORIENTATION_0 = 0;
@@ -49,17 +47,86 @@ public class ThreePartImageUtils {
         return message.getMessageParts().get(PART_INDEX_FULL);
     }
 
-    public static Message newThreePartImageMessage(Context context, LayerClient layerClient, Uri imageUri) throws IOException {
-        Cursor cursor = context.getContentResolver().query(imageUri, new String[]{MediaStore.MediaColumns.DATA}, null, null, null);
+    public static Message newThreePartImageMessage(Context context, LayerClient layerClient, Uri
+            uri) throws IOException {
+        File imageFile = null;
+
+        if ("content".equalsIgnoreCase(uri.getScheme())) {
+
+            // Return the remote address
+            if (isGooglePhotosUri(uri)) {
+                imageFile = new File(uri.getLastPathSegment());
+            }
+
+            if (isNewGooglePhotosUri(uri)) {
+                imageFile = new File(getImageUrlWithAuthority(context, uri));
+            }
+
+            if (imageFile != null) {
+                return newThreePartImageMessage(context, layerClient, imageFile);
+            }
+        }
+
+        Cursor cursor = context.getContentResolver().query(uri, new String[]{MediaStore
+                .MediaColumns.DATA}, null, null, null);
         try {
             if (cursor == null || !cursor.moveToFirst()) return null;
-            return newThreePartImageMessage(context, layerClient, new File(cursor.getString(0)));
+            String filePath = cursor.getString(0);
+            if (filePath != null) {
+                imageFile = new File(filePath);
+            }
+            return newThreePartImageMessage(context, layerClient, imageFile);
         } finally {
             if (cursor != null) cursor.close();
         }
     }
 
-    public static Message newThreePartImageMessage(Context context, LayerClient layerClient, File imageFile) throws IOException {
+
+    public static String getImageUrlWithAuthority(Context context, Uri uri) throws IOException {
+        InputStream inputStream;
+        if (uri.getAuthority() != null) {
+            inputStream = context.getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            return saveToInternalStorage(context, bitmap);
+        }
+        return null;
+    }
+
+    private static String saveToInternalStorage(Context appContext, Bitmap bitmapImage)
+        throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File imageFile;
+        File storageDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        imageFile = File.createTempFile(imageFileName, ".jpg", storageDir);
+
+        FileOutputStream outputStream = null;
+        outputStream = new FileOutputStream(imageFile);
+        bitmapImage.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+        if (outputStream != null) {
+            outputStream.close();
+        }
+        return imageFile.getAbsolutePath();
+    }
+
+    private static boolean isNewGooglePhotosUri(Uri uri) {
+        return "com.google.android.apps.photos.contentprovider".equals(uri.getAuthority());
+    }
+
+    /**
+     * @param uri The Uri to check.
+     * @return Whether the Uri authority is Google Photos.
+     */
+    public static boolean isGooglePhotosUri(Uri uri) {
+        return "com.google.android.apps.photos.content".equals(uri.getAuthority());
+    }
+
+    public static Message newThreePartImageMessage(Context context, LayerClient layerClient,
+            File imageFile) throws IOException {
         if (imageFile == null) throw new IllegalArgumentException("Null image file");
         if (!imageFile.exists()) throw new IllegalArgumentException("Image file does not exist");
         if (!imageFile.canRead()) throw new IllegalArgumentException("Cannot read image file");
@@ -110,7 +177,8 @@ public class ThreePartImageUtils {
      * @param file   Image file
      * @return
      */
-    private static Message newThreePartImageMessage(Context context, LayerClient client, int exifOrientation, int orientation, File file) throws IOException {
+    private static Message newThreePartImageMessage(Context context, LayerClient client,
+            int exifOrientation, int orientation, File file) throws IOException {
         if (client == null) throw new IllegalArgumentException("Null LayerClient");
         if (file == null) throw new IllegalArgumentException("Null image file");
         if (!file.exists()) throw new IllegalArgumentException("No image file");
