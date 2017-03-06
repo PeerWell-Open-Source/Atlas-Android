@@ -2,8 +2,10 @@ package com.layer.atlas.messagetypes.threepartimage;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -13,7 +15,6 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
-
 import com.layer.atlas.R;
 import com.layer.atlas.messagetypes.AttachmentSender;
 import com.layer.atlas.util.Log;
@@ -22,10 +23,10 @@ import com.layer.sdk.messaging.Identity;
 import com.layer.sdk.messaging.Message;
 import com.layer.sdk.messaging.PushNotificationPayload;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.ref.WeakReference;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * CameraSender creates a ThreePartImage from the device's camera.
@@ -70,6 +71,30 @@ public class CameraSender extends AttachmentSender {
 
         Intent cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
         cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
+
+
+      if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.LOLLIPOP) {
+        cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+      }
+      else if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN) {
+        ClipData clip=
+            ClipData.newUri(activity.getContentResolver(), "A photo", outputUri);
+
+        cameraIntent.setClipData(clip);
+        cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+      }
+      else {
+        List<ResolveInfo> resInfoList=
+            activity.getPackageManager()
+                .queryIntentActivities(cameraIntent, PackageManager.MATCH_DEFAULT_ONLY);
+
+        for (ResolveInfo resolveInfo : resInfoList) {
+          String packageName = resolveInfo.activityInfo.packageName;
+          activity.grantUriPermission(packageName, outputUri,
+              Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        }
+      }
+
 
         activity.startActivityForResult(cameraIntent, ACTIVITY_REQUEST_CODE);
     }
