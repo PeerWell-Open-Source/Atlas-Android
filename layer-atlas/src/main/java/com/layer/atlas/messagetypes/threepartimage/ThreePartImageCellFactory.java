@@ -1,12 +1,9 @@
 package com.layer.atlas.messagetypes.threepartimage;
 
 import android.app.Activity;
-import android.app.ActivityOptions;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.v4.widget.ContentLoadingProgressBar;
@@ -15,12 +12,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-
 import com.layer.atlas.R;
 import com.layer.atlas.messagetypes.AtlasCellFactory;
 import com.layer.atlas.util.Log;
 import com.layer.atlas.util.Util;
-import com.layer.atlas.util.imagepopup.AtlasImagePopupActivity;
 import com.layer.atlas.util.picasso.transformations.RoundedTransform;
 import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Message;
@@ -29,11 +24,10 @@ import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
 import com.squareup.picasso.Transformation;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * ThreePartImage handles image Messages with three parts: full image, preview image, and
@@ -146,20 +140,23 @@ public class ThreePartImageCellFactory extends AtlasCellFactory<ThreePartImageCe
 
     @Override
     public void onClick(View v) {
-        AtlasImagePopupActivity.init(mLayerClient);
-        Context context = v.getContext();
-        if (context == null) return;
-        Info info = (Info) v.getTag();
-        Intent intent = new Intent(context, AtlasImagePopupActivity.class);
-        intent.putExtra("previewId", info.previewPartId);
-        intent.putExtra("fullId", info.fullPartId);
-        intent.putExtra("info", info);
+      // commenting because is crashing
+      //java.lang.NoClassDefFoundError: Failed resolution of: Lcom/layer/atlas/util/imagepopup/AtlasImagePopupActivity;
 
-        if (Build.VERSION.SDK_INT >= 21 && context instanceof Activity) {
-            context.startActivity(intent, ActivityOptions.makeSceneTransitionAnimation((Activity) context, v, "image").toBundle());
-        } else {
-            context.startActivity(intent);
-        }
+      //AtlasImagePopupActivity.init(mLayerClient);
+        //Context context = v.getContext();
+        //if (context == null) return;
+        //Info info = (Info) v.getTag();
+        //Intent intent = new Intent(context, AtlasImagePopupActivity.class);
+        //intent.putExtra("previewId", info.previewPartId);
+        //intent.putExtra("fullId", info.fullPartId);
+        //intent.putExtra("info", info);
+        //
+        //if (Build.VERSION.SDK_INT >= 21 && context instanceof Activity) {
+        //    context.startActivity(intent, ActivityOptions.makeSceneTransitionAnimation((Activity) context, v, "image").toBundle());
+        //} else {
+        //    context.startActivity(intent);
+        //}
     }
 
     @Override

@@ -1,21 +1,16 @@
 package com.layer.atlas.messagetypes.singlepartimage;
 
 import android.app.Activity;
-import android.app.ActivityOptions;
 import android.content.Context;
-import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-
 import com.layer.atlas.R;
 import com.layer.atlas.messagetypes.AtlasCellFactory;
-import com.layer.atlas.util.imagepopup.AtlasImagePopupActivity;
 import com.layer.atlas.util.picasso.transformations.RoundedTransform;
 import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Message;
@@ -78,17 +73,20 @@ public class SinglePartImageCellFactory extends AtlasCellFactory<SinglePartImage
 
     @Override
     public void onClick(View v) {
-        AtlasImagePopupActivity.init(mLayerClient);
-        Context context = v.getContext();
-        if (context == null) return;
-        Intent intent = new Intent(context, AtlasImagePopupActivity.class);
-        intent.putExtra("fullId", ((PartId) v.getTag()).mId);
+      // commenting because is crashing
+      //java.lang.NoClassDefFoundError: Failed resolution of: Lcom/layer/atlas/util/imagepopup/AtlasImagePopupActivity;
 
-        if (Build.VERSION.SDK_INT >= 21 && context instanceof Activity) {
-            context.startActivity(intent, ActivityOptions.makeSceneTransitionAnimation((Activity) context, v, "image").toBundle());
-        } else {
-            context.startActivity(intent);
-        }
+      //AtlasImagePopupActivity.init(mLayerClient);
+        //Context context = v.getContext();
+        //if (context == null) return;
+        //Intent intent = new Intent(context, AtlasImagePopupActivity.class);
+        //intent.putExtra("fullId", ((PartId) v.getTag()).mId);
+        //
+        //if (Build.VERSION.SDK_INT >= 21 && context instanceof Activity) {
+        //    context.startActivity(intent, ActivityOptions.makeSceneTransitionAnimation((Activity) context, v, "image").toBundle());
+        //} else {
+        //    context.startActivity(intent);
+        //}
     }
 
     @Override
