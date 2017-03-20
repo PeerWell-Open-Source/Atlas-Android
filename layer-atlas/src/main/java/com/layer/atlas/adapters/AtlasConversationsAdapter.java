@@ -9,8 +9,15 @@ import android.widget.TextView;
 
 import com.layer.atlas.AtlasAvatar;
 import com.layer.atlas.R;
+import com.layer.atlas.messagetypes.AtlasCellFactory;
+import com.layer.atlas.messagetypes.generic.GenericCellFactory;
+import com.layer.atlas.messagetypes.location.LocationCellFactory;
+import com.layer.atlas.messagetypes.singlepartimage.SinglePartImageCellFactory;
+import com.layer.atlas.messagetypes.text.TextCellFactory;
+import com.layer.atlas.messagetypes.threepartimage.ThreePartImageCellFactory;
 import com.layer.atlas.util.ConversationStyle;
 import com.layer.atlas.util.IdentityRecyclerViewEventListener;
+import com.layer.atlas.util.Log;
 import com.layer.atlas.util.Util;
 import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Conversation;
@@ -23,8 +30,11 @@ import com.layer.sdk.query.SortDescriptor;
 import com.squareup.picasso.Picasso;
 
 import java.text.DateFormat;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConversationsAdapter.ViewHolder> implements AtlasBaseAdapter<Conversation>, RecyclerViewController.Callback {
     protected final LayerClient mLayerClient;
@@ -40,6 +50,9 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
     private final DateFormat mTimeFormat;
     private ConversationStyle conversationStyle;
     private final IdentityRecyclerViewEventListener mIdentityEventListener;
+
+    protected Set<AtlasCellFactory> mCellFactories;
+    private Set<AtlasCellFactory> mDefaultCellFactories;
 
     public AtlasConversationsAdapter(Context context, LayerClient client, Picasso picasso) {
         this(context, client, picasso, null);
@@ -63,6 +76,11 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
             @Override
             public void onClick(ViewHolder viewHolder) {
                 if (mConversationClickListener == null) return;
+
+                if (Log.isPerfLoggable()) {
+                    Log.perf("Conversation ViewHolder onClick");
+                }
+
                 mConversationClickListener.onConversationClick(AtlasConversationsAdapter.this, viewHolder.getConversation());
             }
 
@@ -78,6 +96,14 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
         mLayerClient.registerEventListener(mIdentityEventListener);
     }
 
+    public AtlasConversationsAdapter addCellFactories(AtlasCellFactory... cellFactories) {
+        if (mCellFactories == null) {
+            mCellFactories = new LinkedHashSet<AtlasCellFactory>();
+        }
+        Collections.addAll(mCellFactories, cellFactories);
+        return this;
+    }
+
     /**
      * Refreshes this adapter by re-running the underlying Query.
      */
@@ -91,7 +117,6 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
     public void onDestroy() {
         mLayerClient.unregisterEventListener(mIdentityEventListener);
     }
-
 
     //==============================================================================================
     // Initial message history
@@ -164,21 +189,21 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
         Context context = viewHolder.itemView.getContext();
 
         viewHolder.setConversation(conversation);
-        HashSet<Identity> participants = new HashSet<>(conversation.getParticipants());
+        Set<Identity> participants = conversation.getParticipants();
         participants.remove(mLayerClient.getAuthenticatedUser());
 
         // Add the position to the positions map for Identity updates
         mIdentityEventListener.addIdentityPosition(position, participants);
 
         viewHolder.mAvatarCluster.setParticipants(participants);
-        viewHolder.mTitleView.setText(Util.getConversationTitle(mLayerClient, conversation));
+        viewHolder.mTitleView.setText(Util.getConversationTitle(mLayerClient, conversation, participants));
         viewHolder.applyStyle(conversation.getTotalUnreadMessageCount() > 0);
 
         if (lastMessage == null) {
             viewHolder.mMessageView.setText(null);
             viewHolder.mTimeView.setText(null);
         } else {
-            viewHolder.mMessageView.setText(Util.getLastMessageString(context, lastMessage));
+            viewHolder.mMessageView.setText(this.getLastMessageString(context, lastMessage));
             if (lastMessage.getReceivedAt() == null) {
                 viewHolder.mTimeView.setText(null);
             } else {
@@ -212,6 +237,35 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
         return ((ViewHolder) viewHolder).getConversation();
     }
 
+    //==============================================================================================
+    // Util methods
+    //==============================================================================================
+
+    private String getLastMessageString(Context context, Message message) {
+        Set<AtlasCellFactory> cellFactories = (mCellFactories == null || mCellFactories.isEmpty()) ? getDefaultCellFactories() : mCellFactories;
+
+        for (AtlasCellFactory cellFactory : cellFactories) {
+            if (cellFactory.isType(message)) {
+                return cellFactory.getPreviewText(context, message);
+            }
+        }
+
+        return GenericCellFactory.getPreview(context, message);
+    }
+
+    private Set<AtlasCellFactory> getDefaultCellFactories() {
+        if (mDefaultCellFactories == null) {
+            mDefaultCellFactories = new LinkedHashSet<>();
+        }
+        if (mDefaultCellFactories.isEmpty()) {
+            mDefaultCellFactories.addAll(Arrays.asList(new TextCellFactory(),
+                    new ThreePartImageCellFactory(mLayerClient, mPicasso),
+                    new LocationCellFactory(mPicasso),
+                    new SinglePartImageCellFactory(mLayerClient, mPicasso)));
+        }
+
+        return mDefaultCellFactories;
+    }
 
     //==============================================================================================
     // UI update callbacks
@@ -221,43 +275,75 @@ public class AtlasConversationsAdapter extends RecyclerView.Adapter<AtlasConvers
     public void onQueryDataSetChanged(RecyclerViewController controller) {
         syncInitialMessages(0, getItemCount());
         notifyDataSetChanged();
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryDataSetChanged");
+        }
     }
 
     @Override
     public void onQueryItemChanged(RecyclerViewController controller, int position) {
         notifyItemChanged(position);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemChanged. Position: " + position);
+        }
     }
 
     @Override
     public void onQueryItemRangeChanged(RecyclerViewController controller, int positionStart, int itemCount) {
         notifyItemRangeChanged(positionStart, itemCount);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemRangeChanged. Position start: " + positionStart + " Count: " + itemCount);
+        }
     }
 
     @Override
     public void onQueryItemInserted(RecyclerViewController controller, int position) {
         syncInitialMessages(position, 1);
         notifyItemInserted(position);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemInserted. Position: " + position);
+        }
     }
 
     @Override
     public void onQueryItemRangeInserted(RecyclerViewController controller, int positionStart, int itemCount) {
         syncInitialMessages(positionStart, itemCount);
         notifyItemRangeInserted(positionStart, itemCount);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemRangeInserted. Position start: " + positionStart + " Count: " + itemCount);
+        }
     }
 
     @Override
     public void onQueryItemRemoved(RecyclerViewController controller, int position) {
         notifyItemRemoved(position);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemRemoved. Position: " + position);
+        }
     }
 
     @Override
     public void onQueryItemRangeRemoved(RecyclerViewController controller, int positionStart, int itemCount) {
         notifyItemRangeRemoved(positionStart, itemCount);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemRangeRemoved. Position start: " + positionStart + " Count: " + itemCount);
+        }
     }
 
     @Override
     public void onQueryItemMoved(RecyclerViewController controller, int fromPosition, int toPosition) {
         notifyItemMoved(fromPosition, toPosition);
+
+        if (Log.isPerfLoggable()) {
+            Log.perf("Conversations adapter - onQueryItemMoved. From: " + fromPosition + " To: " + toPosition);
+        }
     }
 
 
