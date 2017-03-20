@@ -21,7 +21,6 @@ import android.content.Context;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
-
 import com.layer.atlas.BuildConfig;
 import com.layer.atlas.R;
 import com.layer.sdk.LayerClient;
@@ -35,18 +34,15 @@ import com.layer.sdk.query.Queryable;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 public class Util {
     private static final String METADATA_KEY_CONVERSATION_TITLE = "conversationName";
     private static final int TIME_HOURS_24 = 24 * 60 * 60 * 1000;
     private static final SimpleDateFormat DAY_OF_WEEK = new SimpleDateFormat("EEE, LLL dd,", Locale.US);
+    private static HashMap<String, String> peerIdNames = new HashMap<>();
 
     /**
      * Returns the app version name.
@@ -133,23 +129,30 @@ public class Util {
         }
     }
 
+
+    public static void setPeerIdNames(HashMap<String, String> map) {
+        peerIdNames = map;
+    }
+
     @NonNull
     public static String getDisplayName(Identity identity) {
-        if (TextUtils.isEmpty(identity.getDisplayName())) {
-            String first = identity.getFirstName();
-            String last = identity.getLastName();
-            if (!TextUtils.isEmpty(first)) {
-                if (!TextUtils.isEmpty(last)) {
-                    return String.format("%s %s", first, last);
-                }
-                return first;
-            } else if (!TextUtils.isEmpty(last)) {
-                return last;
-            } else {
-                return identity.getUserId();
-            }
-        }
-        return identity.getDisplayName();
+        return peerIdNames.get(identity.getUserId());
+
+//        if (TextUtils.isEmpty(identity.getDisplayName())) {
+//            String first = identity.getFirstName();
+//            String last = identity.getLastName();
+//            if (!TextUtils.isEmpty(first)) {
+//                if (!TextUtils.isEmpty(last)) {
+//                    return String.format("%s %s", first, last);
+//                }
+//                return first;
+//            } else if (!TextUtils.isEmpty(last)) {
+//                return last;
+//            } else {
+//                return identity.getUserId();
+//            }
+//        }
+//        return identity.getDisplayName();
     }
 
     public static String formatTime(Context context, Date date, DateFormat timeFormat, DateFormat dateFormat) {
