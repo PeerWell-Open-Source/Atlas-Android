@@ -43,6 +43,7 @@ public class Util {
     private static final int TIME_HOURS_24 = 24 * 60 * 60 * 1000;
     private static final SimpleDateFormat DAY_OF_WEEK = new SimpleDateFormat("EEE, LLL dd,", Locale.US);
     private static HashMap<String, String> peerIdNames = new HashMap<>();
+    private static HashMap<String, String> avatarUrls = new HashMap<>();
 
     /**
      * Returns the app version name.
@@ -134,6 +135,11 @@ public class Util {
         peerIdNames = map;
     }
 
+
+    public static void setPeerAvatarUrls(HashMap<String, String> map) {
+        avatarUrls = map;
+    }
+
     @NonNull
     public static String getDisplayName(Identity identity) {
         return peerIdNames.get(identity.getUserId());
@@ -153,6 +159,10 @@ public class Util {
 //            }
 //        }
 //        return identity.getDisplayName();
+    }
+
+    public static String getAvatarImageUrl(Identity added) {
+        return avatarUrls.get(added.getUserId());
     }
 
     public static String formatTime(Context context, Date date, DateFormat timeFormat, DateFormat dateFormat) {
@@ -333,7 +343,7 @@ public class Util {
         layerClient.deauthenticate();
     }
 
-    public interface ContentAvailableCallback {
+  public interface ContentAvailableCallback {
         void onContentAvailable(LayerClient client, Queryable object);
 
         void onContentFailed(LayerClient client, Uri objectId, String reason);

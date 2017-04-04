@@ -180,7 +180,7 @@ public class AtlasAvatar extends View {
             } else {
                 target = recyclableTargets.remove(0);
             }
-            target.setUrl(added.getAvatarImageUrl());
+            target.setUrl(Util.getAvatarImageUrl(added));
             mImageTargets.put(added, target);
             toLoad.add(target);
         }
